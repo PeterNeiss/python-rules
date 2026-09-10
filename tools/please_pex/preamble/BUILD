@@ -30,6 +30,7 @@ go_library(
     srcs = glob(["*.go"]),
     visibility = [
         "//tools/please_pex/pex",
+        "//tools/please_pex/preamble/windows:all",
         "//tools/please_pex:pex_main",
     ],
 )

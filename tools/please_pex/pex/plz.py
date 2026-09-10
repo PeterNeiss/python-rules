@@ -7,6 +7,7 @@ from importlib.metadata import Distribution
 from importlib.util import spec_from_loader
 import itertools
 import os
+import posixpath
 import re
 import sys
 import tempfile
@@ -107,7 +108,7 @@ class PexDistribution(Distribution):
     def locate_file(self, path):
         return zipfile.Path(
             self._pex_file,
-            at=os.path.join(self._prefix, path) if self._prefix else path,
+            at=posixpath.join(self._prefix, path) if self._prefix else path,
         )
 
     read_text.__doc__ = Distribution.read_text.__doc__
@@ -128,9 +129,11 @@ class ModuleDirImport(MetaPathFinder):
         pex_file = sys.argv[0]
         if zipfile.is_zipfile(pex_file):
             zf = ZipFileWithPermissions(pex_file)
-            r = re.compile(r"{module_dir}{sep}([^/]+)-[^/-]+?\.(?:dist|egg)-info/(.*)".format(
-                module_dir=module_dir,
-                sep=os.sep,
+            # N.B. zip member names are always /-separated, whatever the platform, so this
+            # must not use os.sep - on Windows that is a backslash, which would both fail to
+            # match and be read as an escape by the regex compiler.
+            r = re.compile(r"{module_dir}/([^/]+)-[^/-]+?\.(?:dist|egg)-info/(.*)".format(
+                module_dir=re.escape(module_dir),
             ))
             filenames = defaultdict(dict)
             for name in zf.namelist():

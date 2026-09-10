@@ -34,6 +34,7 @@ const (
 //go:embed test_runners/*.py
 //go:embed debuggers/*.py
 //go:embed preamble
+//go:embed preamble_windows
 var files embed.FS
 
 // A Writer implements writing a .pex file in various steps.
@@ -47,6 +48,7 @@ type Writer struct {
 	testRunner       string
 	customTestRunner string
 	debugger         string
+	os               string
 }
 
 // NewWriter constructs a new Writer.
@@ -64,6 +66,20 @@ func NewWriter(entryPoint string, interpreters []string, interpreterArgs []strin
 		pw.preambleConfig.InterpreterArgs = append(pw.preambleConfig.InterpreterArgs, "-S")
 	}
 	return pw
+}
+
+// SetOS sets the operating system the .pex will run on, which decides which preamble it gets.
+// An empty string, or any OS we have no specific preamble for, means the native one.
+func (pw *Writer) SetOS(os string) {
+	pw.os = os
+}
+
+// preambleFile returns the name of the embedded preamble for the OS this .pex is being built for.
+func (pw *Writer) preambleFile() string {
+	if pw.os == "windows" {
+		return "preamble_windows"
+	}
+	return "preamble"
 }
 
 // SetPreambleVerbosity sets the preamble's default minimum logging level.
@@ -155,7 +171,7 @@ func (pw *Writer) Write(out, moduleDir string) error {
 	defer f.Close()
 
 	// Write preamble (i.e. the binary that makes the .pex executable)
-	preambleFile := mustOpen("preamble")
+	preambleFile := mustOpen(pw.preambleFile())
 	defer preambleFile.Close()
 	if err := f.WritePreambleFile(preambleFile); err != nil {
 		return err

@@ -14,6 +14,22 @@ a target which has only had small changes.
 """
 
 
+def _exe_name(out:str):
+    """Returns the given output name with the suffix a runnable output needs on the target platform.
+
+    Windows decides what is executable by extension, and Go's os/exec - which is how Please runs
+    everything - will not run a file whose name has no extension in PATHEXT even when handed its
+    full path. A .pex named after its rule therefore cannot be run at all there, by `plz run` or
+    as a test. A name that already ends in the suffix is left alone.
+
+    N.B. evaluated per call rather than at module level: these build defs are subincluded, and
+    CONFIG.OS at module level is the host rather than the platform being built for.
+    """
+    if CONFIG.OS != "windows" or out.endswith(".exe"):
+        return out
+    return out + ".exe"
+
+
 def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
                    test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[],
                    interpreter:str=CONFIG.PYTHON.DEFAULT_INTERPRETER, strip:bool=False):
@@ -209,7 +225,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         srcs=[pex_rule],
         runtime_deps=runtime_targets,
         deps=[lib_rule],
-        outs=[out or (name + '.pex')],
+        outs=[_exe_name(out or (name + '.pex'))],
         data=data,
         cmd=cmd,
         debug_cmd=debug_cmd,
@@ -378,7 +394,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         runtime_deps=runtime_targets,
         deps=deps,
         data=data,
-        outs=[f'{name}.pex'],
+        outs=[_exe_name(f'{name}.pex')],
         labels=labels + ['test_results_dir'],
         cmd='$TOOL z --include "$SRC" -i . -s .pex.zip -s .whl --preamble_from "$SRC" --include_other --add_init_py --strict',
         test_cmd=test_cmd,
@@ -771,6 +787,20 @@ def _wheel_entrypoint_binary(name:str, entrypoint:str, lib_rule, visibility, tes
     )
 
 
+def _default_runtime_interpreters(build_interp:str):
+    """Returns the interpreters to look for at run time when none have been configured.
+
+    Everywhere else the interpreter that compiled the sources is a reasonable guess, because it
+    is a path that exists on the machine that will run the .pex. Cross-compiling for Windows
+    breaks that: the compiling interpreter is a build tool and so is the host's, and python3 is
+    a spelling a normal Windows install does not have at all. python.exe is what the installer
+    provides and py.exe is the launcher that comes with it.
+    """
+    if CONFIG.OS == "windows":
+        return ["python", "py"]
+    return [build_interp]
+
+
 def _runtime_interpreter(build_interp:str, run_interps:list, run_args:list):
     """Returns a string of please_pex options defining the run-time Python interpreter paths and
     arguments to pass to the interpreter during invocation (falling back to default values where
@@ -779,7 +809,7 @@ def _runtime_interpreter(build_interp:str, run_interps:list, run_args:list):
     """
     opts = []
     targets = []
-    for i in (run_interps or CONFIG.PYTHON.DEFAULT_RUNTIME_INTERPRETERS or [build_interp]):
+    for i in (run_interps or CONFIG.PYTHON.DEFAULT_RUNTIME_INTERPRETERS or _default_runtime_interpreters(build_interp)):
         if looks_like_build_label(i):
             i_target = i.rpartition("|")[0] if "|" in i else i
             # The location of a Python interpreter defined as a build target within the repo

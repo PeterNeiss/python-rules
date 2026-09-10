@@ -18,6 +18,7 @@ var opts = struct {
 	Out               string             `short:"o" long:"out" env:"OUT" description:"Output file"`
 	EntryPoint        string             `short:"e" long:"entry_point" env:"SRC" description:"Entry point to pex file"`
 	ModuleDir         string             `short:"m" long:"module_dir" description:"Python module dir to implicitly load modules from"`
+	OS                string             `long:"os" env:"OS" description:"Operating system the .pex will run on, which decides which preamble it gets. Defaults to the one Please is building for."`
 	TestSrcs          []string           `long:"test_srcs" env:"SRCS" env-delim:" " description:"Test source files"`
 	PreambleVerbosity preamble.Verbosity `long:"preamble_verbosity" optional:"true" optional-value:"level" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal" description:"The preamble's default minimum logging level"`
 	Interpreters      []string           `short:"i" long:"interpreters" required:"true" description:"Python interpreters to attempt to invoke at run-time"`
@@ -50,6 +51,7 @@ func main() {
 		opts.ZipSafe,
 		!opts.Site,
 	)
+	w.SetOS(opts.OS)
 	if opts.PreambleVerbosity != "" {
 		w.SetPreambleVerbosity(opts.PreambleVerbosity)
 	}
