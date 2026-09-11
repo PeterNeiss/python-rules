@@ -69,9 +69,9 @@ Help = A list of additional arguments to pass to the Python interpreter when run
 
 [PluginConfig "pex_tool"]
 ConfigKey = PexTool
-DefaultValue = //tools:please_pex
+Optional = true
 Inherit = true
-Help = A path or build label for the pex tool, which is used to create .pex files from python sources
+Help = A path or build label for the pex tool, which is used to create .pex files from python sources. Defaults to //tools:please_pex, which is a download; on Windows, where there is no release to download, it defaults to the please_pex the Please install bundles.
 
 [PluginConfig "test_runner"]
 ConfigKey = TestRunner

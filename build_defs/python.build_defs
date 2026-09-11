@@ -30,6 +30,28 @@ def _exe_name(out:str):
     return out + ".exe"
 
 
+def _pex_tool():
+    """Returns the please_pex to build with.
+
+    //tools:please_pex is a download of a prebuilt release and there is no Windows one, so a
+    Windows host uses the please_pex the Please release bundles beside please.exe instead, found
+    by name on the build PATH, which always starts with Please's own install directory.
+
+    HOSTOS rather than OS: please_pex runs on the machine doing the building whatever is being
+    built for, so a Linux host cross-compiling to Windows still wants the Linux one - and in
+    this repo it wants one built from source, since no release carries the Windows preamble.
+
+    The fallback names its own subrepo, because a label returned from a build def is resolved in
+    the caller's package rather than the plugin's, unlike a DefaultValue in .plzconfig.
+
+    N.B. evaluated per call rather than at module level; CONFIG at module level reflects the
+    host rather than what is being built for.
+    """
+    if CONFIG.PYTHON.PEX_TOOL:
+        return CONFIG.PYTHON.PEX_TOOL
+    return "please_pex" if CONFIG.HOSTOS == "windows" else "///python//tools:please_pex"
+
+
 def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
                    test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[],
                    interpreter:str=CONFIG.PYTHON.DEFAULT_INTERPRETER, strip:bool=False):
@@ -208,7 +230,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
         tools={
             'interpreter': [interpreter],
             'runtime_interpreters': runtime_targets,
-            'pex': [CONFIG.PYTHON.PEX_TOOL],
+            'pex': [_pex_tool()],
         },
         test_only=test_only,
     )
@@ -348,7 +370,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
         tools={
             'interpreter': [interpreter],
             'runtime_interpreters': runtime_targets,
-            'pex': [CONFIG.PYTHON.PEX_TOOL],
+            'pex': [_pex_tool()],
         },
         labels = labels,
     )
