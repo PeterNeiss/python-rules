@@ -6,10 +6,11 @@ _PLEASE_PEX_VERSION = "3.0.2"
 # publishes its own, this goes away.
 _OWNERS = {"windows_amd64": "PeterNeiss"}
 _PLATFORM = f"{CONFIG.OS}_{CONFIG.ARCH}"
+_OWNER = _OWNERS.get(_PLATFORM, "please-build")
 
 remote_file(
     name = "please_pex",
-    url = f"https://github.com/{_OWNERS.get(_PLATFORM, 'please-build')}/python-rules/releases/download/please_pex-v{_PLEASE_PEX_VERSION}/please_pex-{_PLEASE_PEX_VERSION}-{_PLATFORM}",
+    url = f"https://github.com/{_OWNER}/python-rules/releases/download/please_pex-v{_PLEASE_PEX_VERSION}/please_pex-{_PLEASE_PEX_VERSION}-{_PLATFORM}",
     # The downloaded name carries the version and platform, which on Windows leaves it with no
     # extension in PATHEXT - and Go's exec will not run such a file even given its full path.
     out = "please_pex.exe" if CONFIG.OS == "windows" else None,
