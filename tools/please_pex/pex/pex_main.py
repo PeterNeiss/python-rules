@@ -122,8 +122,15 @@ def explode_zip():
             yield
         finally:
             if no_cache:
-                import shutil
-                shutil.rmtree(basepath)
+                import shutil, stat
+
+                def make_writable(func, path, _):
+                    # Extraction keeps each member's permissions, and on Windows a file without
+                    # write permission is read-only, which refuses to be deleted.
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
+
+                shutil.rmtree(basepath, onerror=make_writable)
 
     return _explode_zip
 
