@@ -55,7 +55,33 @@ def explode_zip():
     """
     # Temporarily add bootstrap to sys path
     sys.path = [os.path.join(sys.path[0], '.bootstrap')] + sys.path[1:]
-    import contextlib, portalocker, plz
+    import contextlib, plz
+    if os.name == 'nt':
+        # portalocker implements Windows locking with pywin32, which a pex cannot count on
+        # being installed; msvcrt is in every Windows Python.
+        import msvcrt, time
+
+        def lock(f):
+            while True:
+                f.seek(0)
+                try:
+                    # LK_LOCK itself gives up after ten one-second tries, so keep asking.
+                    msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+                    return
+                except OSError:
+                    time.sleep(0.1)
+
+        def unlock(f):
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import portalocker
+
+        def lock(f):
+            portalocker.lock(f, portalocker.LOCK_EX)
+
+        def unlock(f):
+            portalocker.lock(f, portalocker.LOCK_UN)
     sys.path = sys.path[1:]
 
     @contextlib.contextmanager
@@ -64,10 +90,10 @@ def explode_zip():
         lockfile_path = os.path.join(basepath, '.lock-%s' % uniquedir)
         with open(lockfile_path, "a+") as lockfile:
             # Block until we can acquire the lockfile.
-            portalocker.lock(lockfile, portalocker.LOCK_EX)
+            lock(lockfile)
             lockfile.seek(0)
             yield lockfile
-            portalocker.lock(lockfile, portalocker.LOCK_UN)
+            unlock(lockfile)
 
     @contextlib.contextmanager
     def _explode_zip():
