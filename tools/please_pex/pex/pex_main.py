@@ -127,8 +127,15 @@ def explode_zip():
                 def make_writable(func, path, _):
                     # Extraction keeps each member's permissions, and on Windows a file without
                     # write permission is read-only, which refuses to be deleted.
-                    os.chmod(path, stat.S_IWRITE)
-                    func(path)
+                    try:
+                        os.chmod(path, stat.S_IWRITE)
+                        func(path)
+                    except OSError:
+                        # Windows will not delete a DLL a process has loaded either, and every
+                        # extension module this pex imported still is. This is a temporary
+                        # directory; leave what cannot go yet rather than fail a program that ran.
+                        if os.name != 'nt':
+                            raise
 
                 shutil.rmtree(basepath, onerror=make_writable)
 
