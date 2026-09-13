@@ -13,13 +13,15 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/please-build/python-rules/tools/please_pex/preamble"
 	"github.com/please-build/python-rules/tools/please_pex/zip"
 )
 
+// testRunnersDir and debuggersDir name directories in the embedded file set, whose paths are
+// slash-separated on every platform. Joined with filepath they came out as test_runners\unittest.py
+// on Windows, and every python_test failed to build there with "file does not exist".
 const testRunnersDir = "test_runners"
 const debuggersDir = "debuggers"
 
@@ -116,7 +118,7 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 			".bootstrap/tomli",
 			".bootstrap/typing_extensions.py",
 		)
-		pw.testRunner = filepath.Join(testRunnersDir, "pytest.py")
+		pw.testRunner = path.Join(testRunnersDir, "pytest.py")
 	case "behave":
 		// These are the outputs of //third_party/python:behave_bootstrap and its transitive dependencies
 		// (except for those from //third_party/python:test_bootstrap).
@@ -130,19 +132,19 @@ func (pw *Writer) SetTest(srcs []string, testRunner string, addTestRunnerDeps bo
 			".bootstrap/traceback2",
 			".bootstrap/win_unicode_console",
 		)
-		pw.testRunner = filepath.Join(testRunnersDir, "behave.py")
+		pw.testRunner = path.Join(testRunnersDir, "behave.py")
 	case "unittest":
 		// These are the outputs of //third_party/python:unittest_bootstrap and its transitive dependencies
 		// (except for those from //third_party/python:test_bootstrap).
 		testRunnerDeps = append(testRunnerDeps,
 			".bootstrap/xmlrunner",
 		)
-		pw.testRunner = filepath.Join(testRunnersDir, "unittest.py")
+		pw.testRunner = path.Join(testRunnersDir, "unittest.py")
 	default:
 		if !strings.ContainsRune(testRunner, '.') {
 			panic("Custom test runner '" + testRunner + "' is invalid; must contain at least one dot")
 		}
-		pw.testRunner = filepath.Join(testRunnersDir, "custom.py")
+		pw.testRunner = path.Join(testRunnersDir, "custom.py")
 		pw.customTestRunner = testRunner
 	}
 
@@ -156,9 +158,9 @@ func (pw *Writer) SetDebugger(debugger Debugger) {
 
 	switch debugger {
 	case "pdb":
-		pw.debugger = filepath.Join(debuggersDir, "pdb.py")
+		pw.debugger = path.Join(debuggersDir, "pdb.py")
 	case "debugpy":
-		pw.debugger = filepath.Join(debuggersDir, "debugpy.py")
+		pw.debugger = path.Join(debuggersDir, "debugpy.py")
 		pw.includeLibs = append(pw.includeLibs, ".bootstrap/debugpy")
 	default:
 		log.Fatalf("Unknown debugger: %s", debugger)

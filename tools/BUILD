@@ -19,9 +19,14 @@ _OWNERS = {
 _PLATFORM = f"{CONFIG.OS}_{CONFIG.ARCH}"
 _OWNER = _OWNERS.get(_PLATFORM, "please-build")
 
+# The Windows build carries fixes the other platforms' builds do not need, so it is released under
+# its own version rather than replacing an asset earlier commits pin by hash.
+_VERSIONS = {"windows_amd64": "3.0.2-windows.1"}
+_VERSION = _VERSIONS.get(_PLATFORM, _PLEASE_PEX_VERSION)
+
 remote_file(
     name = "please_pex",
-    url = f"https://github.com/{_OWNER}/python-rules/releases/download/please_pex-v{_PLEASE_PEX_VERSION}/please_pex-{_PLEASE_PEX_VERSION}-{_PLATFORM}",
+    url = f"https://github.com/{_OWNER}/python-rules/releases/download/please_pex-v{_VERSION}/please_pex-{_VERSION}-{_PLATFORM}",
     # The downloaded name carries the version and platform, which on Windows leaves it with no
     # extension in PATHEXT - and Go's exec will not run such a file even given its full path.
     out = "please_pex.exe" if CONFIG.OS == "windows" else None,
@@ -31,7 +36,7 @@ remote_file(
         "26f8624d81036f3672a2280e6937b04ef1a54ebde041f61e5b34b6837df24817",  # freebsd_amd64
         "54945401920dcac97a8141b4fd884d364c78a65badd20c6e5cf142146b861640",  # linux_amd64
         "a20e952208b421d12a4ebd5ef313cbe4ee740de51a975e739a758b30bc39cb9f",  # linux_arm64
-        "1fd268aca7b022090c40f4d44af5ef825a042d459dde2911574609e41f97f0d9",  # windows_amd64
+        "0165eea83c8f47670405af0b033c1f7d9341736329b9733632df6645e9047d65",  # windows_amd64
     ],
     binary = True,
     visibility = ["PUBLIC"],
