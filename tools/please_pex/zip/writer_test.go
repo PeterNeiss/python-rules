@@ -14,6 +14,35 @@ import (
 
 var expectedModTime = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
 
+func TestAddInitPyFilesKeepsExistingInits(t *testing.T) {
+	f := NewFile("add_init_py_files_test.zip", false)
+	require.NoError(t, f.WriteFile("pkg/sub/__init__.py", []byte("VALUE = 42\n"), 0644))
+	require.NoError(t, f.WriteFile("pkg/sub/mod.py", []byte("import pkg.sub\n"), 0644))
+	require.NoError(t, f.AddInitPyFiles())
+	f.Close()
+
+	r, err := zip.OpenReader("add_init_py_files_test.zip")
+	require.NoError(t, err)
+	defer r.Close()
+	names := map[string]string{}
+	for _, zf := range r.File {
+		// Member names are /-separated, and a package's own __init__.py is never shadowed by
+		// an empty one written under another spelling of its directory.
+		assert.NotContains(t, zf.Name, `\`)
+		rc, err := zf.Open()
+		require.NoError(t, err)
+		b, err := io.ReadAll(rc)
+		require.NoError(t, err)
+		rc.Close()
+		names[zf.Name] = string(b)
+	}
+	assert.Equal(t, map[string]string{
+		"pkg/__init__.py":     "",
+		"pkg/sub/__init__.py": "VALUE = 42\n",
+		"pkg/sub/mod.py":      "import pkg.sub\n",
+	}, names)
+}
+
 func TestAddZipFile(t *testing.T) {
 	// Have to write an actual file for zip.OpenReader to use later.
 	f := NewFile("add_zip_file_test.zip", false)

@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -252,10 +251,10 @@ func (f *File) matchesSuffix(path string, suffixes []string) bool {
 // shouldInclude returns true if the given filename should be included according to the include / exclude sets of this File.
 func (f *File) shouldInclude(name string) bool {
 	for _, excl := range f.Exclude {
-		if matched, _ := filepath.Match(excl, name); matched {
+		if matched, _ := path.Match(excl, name); matched {
 			log.Debug("Skipping %s (excluded by %s)", name, excl)
 			return false
-		} else if matched, _ := filepath.Match(excl, filepath.Base(name)); matched {
+		} else if matched, _ := path.Match(excl, path.Base(name)); matched {
 			log.Debug("Skipping %s (excluded by %s)", name, excl)
 			return false
 		}
@@ -264,7 +263,7 @@ func (f *File) shouldInclude(name string) bool {
 		return true
 	}
 	for _, incl := range f.Include {
-		if matched, _ := filepath.Match(incl, name); matched || strings.HasPrefix(name, incl) {
+		if matched, _ := path.Match(incl, name); matched || strings.HasPrefix(name, incl) {
 			return true
 		}
 	}
@@ -288,16 +287,20 @@ func (f *File) AddInitPyFiles() error {
 		}
 	}
 	sort.Strings(s)
+	// Member names are always /-separated. The filepath functions split on the host separator and
+	// hand back its form, so on Windows every directory came out as a\b, its __init__.py was never
+	// found, and an empty a\b/__init__.py was written beside it - which zipimport, normalising
+	// separators, loaded in place of the real one.
 	for _, p := range s {
-		n := filepath.Base(p)
-		for d := filepath.Dir(p); d != "."; d = filepath.Dir(d) {
-			if filepath.Base(d) == "__pycache__" {
+		n := path.Base(p)
+		for d := path.Dir(p); d != "."; d = path.Dir(d) {
+			if path.Base(d) == "__pycache__" {
 				break // Don't need to add an __init__.py here.
 			}
 			initPyPath := path.Join(d, "__init__.py")
 			// Don't write one at the root, it's not necessary.
 			if _, present := f.files[initPyPath]; present || initPyPath == "__init__.py" {
-				if n == "__init__.py" && d == filepath.Dir(p) {
+				if n == "__init__.py" && d == path.Dir(p) {
 					continue
 				}
 				break
