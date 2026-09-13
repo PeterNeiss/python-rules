@@ -42,9 +42,22 @@ def _pex_tool():
     return CONFIG.PYTHON.PEX_TOOL or "///python//tools:please_pex"
 
 
+def _default_interpreter():
+    """Returns the interpreter to build with when none is configured.
+
+    python3 everywhere except a Windows host. The Windows installer provides python.exe and the
+    py.exe launcher and nothing called python3 - except, sometimes, a Microsoft Store stub under
+    that name, which opens the Store instead of running anything. The empty default [build] path on
+    Windows is a separate matter; this only chooses the name that is looked for.
+    """
+    if CONFIG.PYTHON.DEFAULT_INTERPRETER:
+        return CONFIG.PYTHON.DEFAULT_INTERPRETER
+    return "python" if CONFIG.HOSTOS == "windows" else "python3"
+
+
 def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visibility:list=None,
                    test_only:bool&testonly=False, zip_safe:bool=True, labels:list&features&tags=[],
-                   interpreter:str=CONFIG.PYTHON.DEFAULT_INTERPRETER, strip:bool=False):
+                   interpreter:str=None, strip:bool=False):
     """Generates a Python library target, which collects Python files for use by dependent rules.
 
     Note that each python_library performs some pre-zipping of its inputs before they're combined
@@ -70,6 +83,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
       strip (bool): If True, the original sources are stripped and only bytecode is output.
       labels (list): Any labels to apply to this rule.
     """
+    interpreter = interpreter or _default_interpreter()
     if not zip_safe:
         labels += ['py:zip-unsafe']
     if srcs or resources:
@@ -121,7 +135,7 @@ def python_library(name:str, srcs:list=[], resources:list=[], deps:list=[], visi
 
 def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=None, deps:list=[],
                   data:list=None, visibility:list=None, test_only:bool=False, zip_safe:bool=None,
-                  site:bool=False, strip:bool=False, interpreter:str=CONFIG.PYTHON.DEFAULT_INTERPRETER,
+                  site:bool=False, strip:bool=False, interpreter:str=None,
                   runtime_interpreters:list=None, runtime_interpreter_args:list=None,
                   module_dir:str=CONFIG.PYTHON.MODULE_DIR, labels:list&features&tags=[]):
     """Generates a Python binary target.
@@ -168,6 +182,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
                      Defaults to value of python.moduledir setting.
       labels (list): Labels to apply to this rule.
     """
+    interpreter = interpreter or _default_interpreter()
     assert main not in srcs, "main file should not be included in srcs"
 
     lib_rule_name = '_%s#lib' % name
@@ -263,7 +278,7 @@ def python_binary(name:str, main:str, srcs:list=[], resources:list=[], out:str=N
 def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:list=[], worker:str='',
                 labels:list&features&tags=[], size:str=None, flags:str='', visibility:list=None,
                 sandbox:bool=None, timeout:int=0, flaky:bool|int=0, env:dict=None,
-                test_outputs:list=None, zip_safe:bool=None, interpreter:str=CONFIG.PYTHON.DEFAULT_INTERPRETER,
+                test_outputs:list=None, zip_safe:bool=None, interpreter:str=None,
                 runtime_interpreters:list=None, runtime_interpreter_args:list=None,
                 site:bool=False, test_runner:str=None, module_dir:str=CONFIG.PYTHON.MODULE_DIR):
     """Generates a Python test target.
@@ -318,6 +333,7 @@ def python_test(name:str, srcs:list, data:list|dict=[], resources:list=[], deps:
       test_runner (str): Specify which Python test runner to use for these tests. One of
                          `unittest`, `pytest`, or a custom test runner entry point.
     """
+    interpreter = interpreter or _default_interpreter()
     test_runner = test_runner or CONFIG.PYTHON.TEST_RUNNER
     runtime_args, runtime_targets = _runtime_interpreter(interpreter, runtime_interpreters, runtime_interpreter_args)
     cmd = '$TOOLS_PEX --preamble_verbosity="%s" -t -m "%s" -r "%s" --zip_safe --add_test_runner_deps %s --stamp="$RULE_HASH"' % (
@@ -527,7 +543,7 @@ def pip_library(name:str, version:str, labels:list=[], hashes:list=None, package
     if post_install_commands:
         pip_cmd = ' && '.join([pip_cmd] + post_install_commands)
 
-    tools = {'pip': [CONFIG.PYTHON.PIP_TOOL]} if CONFIG.PYTHON.PIP_TOOL else {'python': [CONFIG.PYTHON.DEFAULT_INTERPRETER]}
+    tools = {'pip': [CONFIG.PYTHON.PIP_TOOL]} if CONFIG.PYTHON.PIP_TOOL else {'python': [_default_interpreter()]}
     srcs = build_rule(
         name = name,
         tag = "srcs",
@@ -579,7 +595,7 @@ def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, packag
                  deps:list=[], name_scheme:str|list=CONFIG.PYTHON.WHEEL_NAME_SCHEME,
                  strip:list=['*.pyc', 'tests'], binary = False, entry_points:dict|str={},
                  tool:str=CONFIG.PYTHON.WHEEL_TOOL, prereleases:bool=CONFIG.PYTHON.PRERELEASES,
-                 tool_verbosity:str=CONFIG.PYTHON.VERBOSITY, interpreter:str=CONFIG.PYTHON.DEFAULT_INTERPRETER,
+                 tool_verbosity:str=CONFIG.PYTHON.VERBOSITY, interpreter:str=None,
                  module_dir:str=CONFIG.PYTHON.MODULE_DIR):
     """Downloads a Python wheel and extracts it.
 
@@ -628,6 +644,7 @@ def python_wheel(name:str, version:str, labels:list=[], hashes:list=None, packag
                      Defaults to value of python.moduledir setting.
       tool (str): Tool to locate python wheel file in an index
     """
+    interpreter = interpreter or _default_interpreter()
     binary = binary or entry_points
     package_name = package_name or name.replace('-', '_')
     initial = package_name[0]

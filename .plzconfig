@@ -49,9 +49,9 @@ name = python
 
 [PluginConfig "default_interpreter"]
 ConfigKey = DefaultInterpreter
-DefaultValue = python3
+Optional = true
 Inherit = true
-Help = The default Python interpreter to use when building .pex files.
+Help = The default Python interpreter to use when building .pex files. Defaults to python3, or to python on a Windows host, where no normal install provides python3.
 
 [PluginConfig "default_runtime_interpreters"]
 ConfigKey = DefaultRuntimeInterpreters
