@@ -21,7 +21,7 @@ _OWNER = _OWNERS.get(_PLATFORM, "please-build")
 
 # The Windows build carries fixes the other platforms' builds do not need, so it is released under
 # its own version rather than replacing an asset earlier commits pin by hash.
-_VERSIONS = {"windows_amd64": "3.0.2-windows.1"}
+_VERSIONS = {"windows_amd64": "3.0.2-windows.2"}
 _VERSION = _VERSIONS.get(_PLATFORM, _PLEASE_PEX_VERSION)
 
 remote_file(
@@ -36,7 +36,7 @@ remote_file(
         "26f8624d81036f3672a2280e6937b04ef1a54ebde041f61e5b34b6837df24817",  # freebsd_amd64
         "54945401920dcac97a8141b4fd884d364c78a65badd20c6e5cf142146b861640",  # linux_amd64
         "a20e952208b421d12a4ebd5ef313cbe4ee740de51a975e739a758b30bc39cb9f",  # linux_arm64
-        "0165eea83c8f47670405af0b033c1f7d9341736329b9733632df6645e9047d65",  # windows_amd64
+        "29b7712e7de5575d6cd7cf0f504ee39b8542e564c90e0ad9b6c84cac22061ef6",  # windows_amd64
     ],
     binary = True,
     visibility = ["PUBLIC"],
